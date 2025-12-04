@@ -32,6 +32,7 @@ export interface Trip {
   coverColor: string;
   userId: string;
   createdAt: string;
+  updatedAt?: string;
   days: TripDay[];
 }
 
