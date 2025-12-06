@@ -35,7 +35,7 @@ export function PublicNav({ rightSlot }: PublicNavProps) {
 // ── App navbar (authenticated pages) ────────────────────
 interface AppNavProps {
   email?: string;
-  onLogout?: () => void;
+  onLogout?: () => void | Promise<void>;
   backLabel?: string;
   backTo?: string;
 }
@@ -68,7 +68,9 @@ export function AppNav({ email, onLogout, backLabel, backTo }: AppNavProps) {
         </div>
         {onLogout && (
           <button
-            onClick={onLogout}
+            onClick={() => {
+              void onLogout();
+            }}
             className="text-xs text-gray-400 border border-gray-200 rounded-md px-2.5 py-1 hover:bg-gray-50 transition-colors"
           >
             Log out
