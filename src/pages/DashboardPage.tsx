@@ -1,39 +1,41 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { AppNav, Button } from "../components/ui";
+import { AppNav, Button, Alert } from "../components/ui";
 import { daysBetween, isUpcoming } from "../utils/helpers";
-import { Trip } from "../types";
 import { TripCardComponent } from "../components/TripCardComponent";
 import { CreateTripModalComponent } from "../components/CreateTripModalComponent";
-
-// ── Mock trips for UI preview ────────────────────────────
-const MOCK_TRIPS: Trip[] = [
-  {
-    id: "1", title: "Summer in Japan", destination: "Tokyo · Kyoto · Osaka",
-    startDate: "2025-06-01", endDate: "2025-06-14", coverColor: "#378ADD",
-    description: "Cherry blossoms, temples and great food.",
-    userId: "u1", createdAt: new Date().toISOString(), days: [],
-  },
-  {
-    id: "2", title: "Lisbon long weekend", destination: "Lisbon, Portugal",
-    startDate: "2025-07-18", endDate: "2025-07-21", coverColor: "#1D9E75",
-    description: "Pastéis de nata and sunset over the Tagus.",
-    userId: "u1", createdAt: new Date().toISOString(), days: [],
-  },
-  {
-    id: "3", title: "Barcelona city break", destination: "Barcelona, Spain",
-    startDate: "2024-03-03", endDate: "2024-03-07", coverColor: "#D85A30",
-    userId: "u1", createdAt: new Date().toISOString(), days: [],
-  },
-];
+import { useAuth } from "../context/AuthContext";
+import { useTrips } from "../hooks/useTrips";
 
 type Filter = "all" | "upcoming" | "past";
 
 export default function DashboardPage() {
   const navigate = useNavigate();
-  const [trips]        = useState<Trip[]>(MOCK_TRIPS);
+  const { user, signOutUser } = useAuth();
+  // Fetch the current user's trips from Firestore with real-time updates
+  const { trips, loading, error } = useTrips(user?.uid);
   const [filter, setFilter] = useState<Filter>("all");
   const [showModal, setShowModal] = useState(false);
+  const [createdId, setCreatedId] = useState<string | null>(null);
+
+  // Debug: log modal state changes to verify parent handler is called
+  useEffect(() => {
+    // eslint-disable-next-line no-console
+    console.debug("Dashboard: showModal =>", showModal);
+  }, [showModal]);
+
+  // Wrapper around setShowModal so we can log invocations from child
+  function closeModal() {
+    // eslint-disable-next-line no-console
+    console.debug("Dashboard: closeModal called");
+    setShowModal(false);
+  }
+
+  function handleCreated(id: string) {
+    // show temporary confirmation with the created Firestore document id
+    setCreatedId(id);
+    setTimeout(() => setCreatedId(null), 6000);
+  }
 
   const filtered = trips.filter(t =>
     filter === "all"      ? true :
@@ -44,17 +46,39 @@ export default function DashboardPage() {
   const past     = filtered.filter(t => !isUpcoming(t.endDate));
 
   const totalDays = trips.reduce((a, t) => a + daysBetween(t.startDate, t.endDate), 0);
+  const displayName = user?.email?.split("@")[0] ?? "traveler";
+
+  async function handleLogout() {
+    await signOutUser();
+    navigate("/login", { replace: true });
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <AppNav email="jan@example.com" onLogout={() => {navigate("/")}} />
+      <AppNav email={user?.email ?? undefined} onLogout={handleLogout} />
 
       <div className="max-w-2xl mx-auto px-4 py-7">
+          {/* error message if trip fetching failed */}
+          {error && (
+            <Alert type="error" message={error} />
+          )}
+
+          {/* temporary success confirmation after creating a trip */}
+          {createdId && (
+            <div className="mb-4">
+              <Alert type="success" message={
+                <span>
+                  Trip created — document id: <strong>{createdId}</strong>
+                </span>
+              } />
+            </div>
+          )}
+
         {/* header */}
         <div className="flex items-start justify-between mb-5">
           <div>
             <h1 className="text-xl font-semibold text-gray-900">My trips</h1>
-            <p className="text-sm text-gray-500 mt-0.5">Good to have you back, Jan</p>
+            <p className="text-sm text-gray-500 mt-0.5">Good to have you back, {displayName}</p>
           </div>
           <Button onClick={() => setShowModal(true)} size="md">
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
@@ -95,8 +119,21 @@ export default function DashboardPage() {
           ))}
         </div>
 
+        {/* loading state while fetching trips from Firestore */}
+        {loading && (
+          <div className="bg-white border border-gray-200 rounded-2xl py-8 text-center">
+            <div className="inline-block animate-spin text-blue-500 mb-3">
+              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="none" opacity="0.3"/>
+                <path d="M12 2a10 10 0 0 1 0 20" stroke="currentColor" strokeWidth="2" fill="none"/>
+              </svg>
+            </div>
+            <div className="text-sm text-gray-500">Loading your trips...</div>
+          </div>
+        )}
+
         {/* empty state */}
-        {trips.length === 0 && (
+        {!loading && trips.length === 0 && (
           <div className="bg-white border-2 border-dashed border-gray-200 rounded-2xl py-14 text-center">
             <div className="text-4xl mb-3">🗺️</div>
             <div className="text-sm font-medium text-gray-700 mb-1">No trips yet</div>
@@ -127,7 +164,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Create trip modal */}
-      {showModal && <CreateTripModalComponent onClose={() => setShowModal(false)} onCreated={id => navigate(`/trip/${id}`)} />}
+      {showModal && <CreateTripModalComponent userId={user?.uid ?? ""} onClose={closeModal} onCreated={handleCreated} />}
     </div>
   );
 }
