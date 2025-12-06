@@ -4,16 +4,34 @@ import { LoginPage, SignupPage } from "./pages/AuthPages";
 import DashboardPage from "./pages/DashboardPage";
 import TripDetailPage from "./pages/TripDetailPage";
 import NotFoundPage from "./pages/NotFoundPage";
+import { useAuth } from "./context/AuthContext";
 
-// TODO: replace with real auth check from Firebase
-const isAuthenticated = true;
+function RouteLoading() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-white text-gray-500 text-sm">
+      Checking your sign-in status…
+    </div>
+  );
+}
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />;
+  const { user, initializing } = useAuth();
+
+  if (initializing) {
+    return <RouteLoading />;
+  }
+
+  return user ? <>{children}</> : <Navigate to="/login" replace />;
 }
 
 function PublicOnlyRoute({ children }: { children: React.ReactNode }) {
-  return isAuthenticated ? <Navigate to="/dashboard" replace /> : <>{children}</>;
+  const { user, initializing } = useAuth();
+
+  if (initializing) {
+    return <RouteLoading />;
+  }
+
+  return user ? <Navigate to="/dashboard" replace /> : <>{children}</>;
 }
 
 export default function App() {
