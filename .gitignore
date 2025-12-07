@@ -29,3 +29,12 @@ firestore-debug.log
 # OS
 .DS_Store
 Thumbs.db
+
+# TypeScript
+*.tsbuildinfo
+
+# Vite cache
+.vite/
+
+# Coverage
+coverage/
