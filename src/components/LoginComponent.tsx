@@ -1,22 +1,53 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Button, Input, Alert } from "./ui";
 import { AuthNavComponent } from "./AuthNavComponent";
+import { getAuthErrorMessage } from "../auth/authErrors";
+import { useAuth } from "../context/AuthContext";
 
 export function LoginComponent() {
+  const navigate = useNavigate();
+  const { signIn, resetPassword } = useAuth();
   const [email, setEmail]     = useState("");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw]   = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState("");
+  const [info, setInfo]       = useState("");
+
+  async function handlePasswordReset() {
+    setError("");
+    setInfo("");
+
+    if (!email) {
+      setError("Enter your email first and I’ll send the reset link there.");
+      return;
+    }
+
+    try {
+      // A small kindness: use the address they already typed so they do not have to repeat it.
+      await resetPassword(email);
+      setInfo("If the email exists, we sent a password reset link.");
+    } catch (err) {
+      setError(getAuthErrorMessage(err));
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    setInfo("");
     setLoading(true);
-    await new Promise(r => setTimeout(r, 1200));
-    setLoading(false);
-    setError("Firebase not yet configured — this is a UI preview.");
+
+    try {
+      await signIn(email, password);
+      navigate("/dashboard", { replace: true });
+    } catch (err) {
+      setError(getAuthErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -34,6 +65,7 @@ export function LoginComponent() {
       </div>
 
       {error && <div className="mb-4"><Alert type="error" message={error} /></div>}
+      {info && <div className="mb-4"><Alert type="info" message={info} /></div>}
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <Input
@@ -53,7 +85,9 @@ export function LoginComponent() {
             }
           />
           <div className="text-right mt-1">
-            <span className="text-xs cursor-pointer hover:underline" style={{ color: "#185FA5" }}>Forgot password?</span>
+            <button type="button" onClick={handlePasswordReset} className="text-xs cursor-pointer hover:underline" style={{ color: "#185FA5" }}>
+              Forgot password?
+            </button>
           </div>
         </div>
 

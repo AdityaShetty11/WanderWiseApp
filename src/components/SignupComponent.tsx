@@ -1,14 +1,20 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Button, Input, Alert } from "./ui";
 import { AuthNavComponent } from "./AuthNavComponent";
+import { getAuthErrorMessage } from "../auth/authErrors";
+import { useAuth } from "../context/AuthContext";
 
 export function SignupComponent() {
+  const navigate = useNavigate();
+  const { signUp } = useAuth();
   const [email, setEmail]     = useState("");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw]   = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState("");
+  const [info, setInfo]       = useState("");
 
   // Password strength
   const strength = (() => {
@@ -26,11 +32,18 @@ export function SignupComponent() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    setInfo("");
     setLoading(true);
-    // TODO: wire Firebase Auth
-    await new Promise(r => setTimeout(r, 1200));
-    setLoading(false);
-    setError("Firebase not yet configured — this is a UI preview.");
+
+    try {
+      await signUp(email, password);
+      setInfo("Account created. Taking you to your dashboard now.");
+      navigate("/dashboard", { replace: true });
+    } catch (err) {
+      setError(getAuthErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -49,6 +62,7 @@ export function SignupComponent() {
       </div>
 
       {error && <div className="mb-4"><Alert type="error" message={<>{error} <Link to="/login" className="font-medium underline">Log in instead?</Link></>} /></div>}
+      {info && <div className="mb-4"><Alert type="success" message={info} /></div>}
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <Input
