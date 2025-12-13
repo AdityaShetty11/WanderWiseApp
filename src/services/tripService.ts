@@ -108,10 +108,8 @@ export async function createTrip(userId: string, trip: Trip): Promise<Trip> {
       createdAt: Timestamp.now(), // Records when the trip was created
       updatedAt: Timestamp.now(), // Records when the trip was last modified
     };
-console.log('tripData',tripData);
     // Write the trip to Firestore
     await setDoc(newDocRef, tripData);
-console.log('return');
     // Return the created trip with the Firestore document ID and ISO string timestamps
     return {
       ...trip,
