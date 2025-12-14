@@ -45,12 +45,6 @@ export function CreateTripModalComponent({ userId, onClose, onCreated }: { userI
         days: buildDaysFromRange(startDate, endDate),
       };
 
-      // Debug logs
-      // eslint-disable-next-line no-console
-      console.debug("CreateTrip: userId=", userId);
-      // eslint-disable-next-line no-console
-      console.debug("CreateTrip: payload=", newTrip);
-
       // Save and get created id
       const created = await createTrip(userId, newTrip);
 
@@ -67,8 +61,6 @@ export function CreateTripModalComponent({ userId, onClose, onCreated }: { userI
       if (onCreated) {
         try { onCreated(created.id); } catch (_) {}
       }
-      // eslint-disable-next-line no-console
-      console.debug("CreateTrip: calling onClose()");
       onClose();
     } catch (error) {
       // eslint-disable-next-line no-console
