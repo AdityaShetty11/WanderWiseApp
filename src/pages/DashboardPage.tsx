@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppNav, Button, Alert } from "../components/ui";
 import { daysBetween, isUpcoming } from "../utils/helpers";
@@ -18,16 +18,9 @@ export default function DashboardPage() {
   const [showModal, setShowModal] = useState(false);
   const [createdId, setCreatedId] = useState<string | null>(null);
 
-  // Debug: log modal state changes to verify parent handler is called
-  useEffect(() => {
-    // eslint-disable-next-line no-console
-    console.debug("Dashboard: showModal =>", showModal);
-  }, [showModal]);
 
-  // Wrapper around setShowModal so we can log invocations from child
+
   function closeModal() {
-    // eslint-disable-next-line no-console
-    console.debug("Dashboard: closeModal called");
     setShowModal(false);
   }
 
