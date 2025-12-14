@@ -6,15 +6,7 @@ import { Activity, ActivityCategory, AISuggestion, Trip, TripDay } from "../type
 import { generateId } from "../utils/helpers";
 import { useAuth } from "../context/AuthContext";
 import { getTripById, updateTrip } from "../services/tripService";
-
-const MOCK_SUGGESTIONS: AISuggestion[] = [
-  { name: "Tokyo Tower", category: "sightseeing", location: "Minato, Tokyo", duration: "1 hr", bestTime: "17:00", description: "Iconic views over the city. Less crowded than Skytree, especially beautiful at night.", isHiddenGem: false },
-  { name: "Yanaka Ginza", category: "sightseeing", location: "Yanaka, Tokyo", duration: "1.5 hrs", bestTime: "14:00", description: "Old Tokyo neighbourhood that survived WWII. Quiet, local, and tourist-free.", isHiddenGem: true },
-  { name: "Ichiran Ramen", category: "food", location: "Multiple locations", duration: "45 min", bestTime: "12:30", description: "Solo dining booths for full ramen concentration. Visit off-peak hours.", isHiddenGem: false },
-  { name: "Tsukiji Market breakfast", category: "food", location: "Tsukiji, Tokyo", duration: "1 hr", bestTime: "08:00", description: "Fresh sushi and street food breakfast. Outer market stalls remain vibrant.", isHiddenGem: false },
-  { name: "Mount Takao hike", category: "sightseeing", location: "Hachioji, Tokyo", duration: "4 hrs", bestTime: "09:00", description: "Easy day hike with panoramic views of Mt Fuji on clear days.", isHiddenGem: true },
-  { name: "Shinkansen to Kyoto", category: "transport", location: "Tokyo Station", duration: "2.5 hrs", bestTime: "09:30", description: "Take the Nozomi — fastest option. Book JR Pass in advance.", isHiddenGem: false },
-];
+import { fetchAISuggestions } from "../services/aiSuggestionService";
 
 type AIFilter = "All" | "Sightseeing" | "Food" | "Transport" | "Hidden gems";
 
@@ -33,6 +25,8 @@ export default function TripDetailPage() {
   const [addedSugs, setAddedSugs] = useState<Set<string>>(new Set());
   const [savingTrip, setSavingTrip] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [aiSuggestions, setAISuggestions] = useState<AISuggestion[]>([]);
+  const [aiError, setAIError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -127,7 +121,7 @@ export default function TripDetailPage() {
     setAddedSugs((prev) => new Set(prev).add(sug.name));
   }
 
-  const filteredSugs = MOCK_SUGGESTIONS.filter((sug) =>
+  const filteredSugs = aiSuggestions.filter((sug) =>
     aiFilter === "All"
       ? true
       : aiFilter === "Hidden gems"
@@ -136,10 +130,26 @@ export default function TripDetailPage() {
   );
 
   async function loadAI() {
+    if (!trip) return;
     setShowAI(true);
     setAILoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1800));
-    setAILoading(false);
+    setAIError(null);
+
+    try {
+      const destination = trip.destination;
+      const suggestions = await fetchAISuggestions(
+        destination,
+        trip.startDate,
+        trip.endDate
+      );
+      setAISuggestions(suggestions);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setAIError(message);
+      console.error("Failed to load AI suggestions:", err);
+    } finally {
+      setAILoading(false);
+    }
   }
 
   return (
@@ -327,8 +337,8 @@ export default function TripDetailPage() {
       )}
 
       {!loading && !error && trip && showAI && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-end justify-center">
-          <div className="bg-white rounded-t-2xl w-full max-w-2xl max-h-[80vh] flex flex-col">
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center">
+          <div className="bg-white rounded-2xl rounded-b-2xl w-full max-w-2xl max-h-[80vh] flex flex-col">
             <div className="flex justify-center pt-3 pb-1">
               <div className="w-9 h-1 bg-gray-200 rounded-full" />
             </div>
@@ -365,6 +375,13 @@ export default function TripDetailPage() {
                   <div className="w-10 h-10 border-2 border-gray-100 border-t-blue-500 rounded-full animate-spin" />
                   <div className="text-sm font-medium text-gray-700">Finding the best places…</div>
                   <div className="text-xs text-gray-400 text-center max-w-xs">Claude is analysing your destination and trip dates to find the most relevant activities.</div>
+                </div>
+              ) : aiError ? (
+                <div className="flex flex-col items-center justify-center py-12 gap-3">
+                  <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center text-lg">⚠️</div>
+                  <div className="text-sm font-medium text-gray-700">Failed to load suggestions</div>
+                  <div className="text-xs text-gray-500 text-center max-w-xs">{aiError}</div>
+                  <button onClick={loadAI} className="text-xs text-blue-600 hover:text-blue-700 font-medium mt-2">Try again</button>
                 </div>
               ) : (
                 <>
@@ -409,7 +426,7 @@ export default function TripDetailPage() {
               )}
             </div>
 
-            <div className="px-5 py-3 border-t border-gray-100 bg-gray-50">
+            <div className="px-5 py-3 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
               <p className="text-[10px] text-gray-400 text-center">
                 ℹ Suggestions are AI-generated. Always verify times and opening hours before visiting.
               </p>
