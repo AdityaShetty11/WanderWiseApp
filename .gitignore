@@ -1,0 +1,40 @@
+# Dependencies
+node_modules/
+functions/node_modules/
+package-lock.json
+
+# Build outputs
+dist/
+functions/lib/
+
+# Firebase
+.firebase/
+firebase-debug.log
+firestore-debug.log
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Editor
+.vscode/settings.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# OS
+.DS_Store
+Thumbs.db
+
+# TypeScript
+*.tsbuildinfo
+
+# Vite cache
+.vite/
+
+# Coverage
+coverage/
